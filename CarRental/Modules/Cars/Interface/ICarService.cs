@@ -2,8 +2,8 @@ using CarRental.Modules.Cars.Models;
 
 namespace CarRental.Modules.Cars.Interface
 {
-    public interface ICarService
+    public interface ICarService : ICarRepository
     {
-        Task<IReadOnlyList<Car>> GetAvailableCarsAsync(DateTime startDate, DateTime endDate);
+        Task<IReadOnlyList<Car>> GetCarsAsync(DateTime? startDate = null, DateTime? endDate = null);
     }
 }

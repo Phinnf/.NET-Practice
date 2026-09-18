@@ -1,4 +1,10 @@
 
+using CarRental.Core.Middlewares;
+using CarRental.Data;
+using CarRental.Modules.Cars.Interface;
+using CarRental.Modules.Cars.Services;
+using Microsoft.EntityFrameworkCore;
+
 namespace CarRental
 {
     public class Program
@@ -8,25 +14,61 @@ namespace CarRental
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            // DB
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+            // Module
+            builder.Services.AddScoped<ICarService, CarService>();
 
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+            // CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
+            // OpenAPI
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
+
+            // Global exception handling
+            app.UseMiddleware<GlobalExceptionMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/openapi/v1.json", "Car Rental API v1");
+                    options.RoutePrefix = "swagger";
+                });
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 
 
             app.MapControllers();
+
+            // Auto-create database & tables if they do not exist
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.EnsureCreated();
+            }
 
             app.Run();
         }
