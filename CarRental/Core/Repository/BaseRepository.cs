@@ -1,4 +1,4 @@
-﻿using CarRental.Core.Common;
+using CarRental.Core.Common;
 using CarRental.Core.Interface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -30,6 +30,12 @@ namespace CarRental.Core.Repository
         }
         public virtual async Task<T> CreateAsync(T data)
         {
+            if (data.Id == Guid.Empty)
+            {
+                data.Id = Guid.NewGuid();
+            }
+            data.CreatedAtUtc = DateTime.UtcNow;
+
             await _dbSet.AddAsync(data);
             await _context.SaveChangesAsync();
             return data;
@@ -39,8 +45,11 @@ namespace CarRental.Core.Repository
             var existing = await _dbSet.FindAsync(id);
             if (existing == null) return null;
 
+            var originalCreatedAt = existing.CreatedAtUtc;
 
             _context.Entry(existing).CurrentValues.SetValues(data);
+            existing.Id = id;
+            existing.CreatedAtUtc = originalCreatedAt;
             existing.UpdatedAtUtc = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

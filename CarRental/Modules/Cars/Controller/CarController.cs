@@ -35,7 +35,10 @@ namespace CarRental.Modules.Cars.Controller
 
         [HttpPost]
         public async Task<ActionResult<Car>> Create([FromBody] Car car)
-            => Ok(await _carService.CreateAsync(car));
+        {
+            var created = await _carService.CreateAsync(car);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
 
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<Car>> Update(Guid id, [FromBody] Car car)

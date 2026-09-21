@@ -1,4 +1,5 @@
 using CarRental.Core.Repository;
+using CarRental.Data;
 using CarRental.Modules.Cars.Interface;
 using CarRental.Modules.Cars.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ namespace CarRental.Modules.Cars.Repository
 {
     public class CarRepository : BaseRepository<Car>, ICarRepository
     {
-        public CarRepository(DbContext context) : base(context)
+        public CarRepository(AppDbContext context) : base(context)
         {
         }
         public async Task<IReadOnlyList<Car>> FindAvailableCars(DateTime startDate, DateTime endDate)

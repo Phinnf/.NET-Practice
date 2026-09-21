@@ -1,7 +1,9 @@
-
+using CarRental.Core.Interface;
 using CarRental.Core.Middlewares;
+using CarRental.Core.Repository;
 using CarRental.Data;
 using CarRental.Modules.Cars.Interface;
+using CarRental.Modules.Cars.Repository;
 using CarRental.Modules.Cars.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,14 +16,24 @@ namespace CarRental
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            // DB
+            // Database
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
-            // Module
+            // IMemoryCache
+            builder.Services.AddMemoryCache();
+
+            // Repositories (Decorated with CachedCarRepository for In-Memory Caching)
+            builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+            builder.Services.AddScoped<CarRepository>();
+            builder.Services.AddScoped<ICarRepository>(sp =>
+                ActivatorUtilities.CreateInstance<CachedCarRepository>(sp, sp.GetRequiredService<CarRepository>()));
+
+            // Services
             builder.Services.AddScoped<ICarService, CarService>();
 
+            // Controller
             builder.Services.AddControllers();
 
             // CORS
