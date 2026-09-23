@@ -1,15 +1,19 @@
+using CarRental.Modules.Cars.Events;
 using CarRental.Modules.Cars.Interface;
 using CarRental.Modules.Cars.Models;
+using MassTransit;
 
 namespace CarRental.Modules.Cars.Services
 {
     public class CarService : ICarService
     {
         private readonly ICarRepository _carRepository;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public CarService(ICarRepository carRepository)
+        public CarService(ICarRepository carRepository, IPublishEndpoint publishEndpoint)
         {
             _carRepository = carRepository;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<IReadOnlyList<Car>> GetCarsAsync(DateTime? startDate = null, DateTime? endDate = null)
@@ -47,7 +51,19 @@ namespace CarRental.Modules.Cars.Services
 
         public async Task<Car> CreateAsync(Car car)
         {
-            return await _carRepository.CreateAsync(car);
+            var created = await _carRepository.CreateAsync(car);
+
+            // Bắn message CarCreatedEvent lên RabbitMQ Queue
+            await _publishEndpoint.Publish(new CarCreatedEvent
+            {
+                Id = created.Id,
+                Brand = created.Brand,
+                CarModel = created.CarModel,
+                BasePrice = created.BasePrice,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            return created;
         }
 
         public async Task<Car> UpdateAsync(Guid id, Car data)

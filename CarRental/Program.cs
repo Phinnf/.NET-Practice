@@ -2,9 +2,11 @@ using CarRental.Core.Interface;
 using CarRental.Core.Middlewares;
 using CarRental.Core.Repository;
 using CarRental.Data;
+using CarRental.Modules.Cars.Consumers;
 using CarRental.Modules.Cars.Interface;
 using CarRental.Modules.Cars.Repository;
 using CarRental.Modules.Cars.Services;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace CarRental
@@ -32,6 +34,31 @@ namespace CarRental
 
             // Services
             builder.Services.AddScoped<ICarService, CarService>();
+
+            // MassTransit - RabbitMQ Message Queue
+            builder.Services.AddMassTransit(x =>
+            {
+                // Đăng ký Consumer xử lý message
+                x.AddConsumer<CarCreatedConsumer>();
+
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    var rabbitConfig = builder.Configuration.GetSection("RabbitMQ");
+                    var host = rabbitConfig.GetValue<string>("Host") ?? "localhost";
+                    var port = rabbitConfig.GetValue<ushort?>("Port") ?? 5672;
+                    var username = rabbitConfig.GetValue<string>("Username") ?? "guest";
+                    var password = rabbitConfig.GetValue<string>("Password") ?? "guest";
+
+                    cfg.Host(host, port, "/", h =>
+                    {
+                        h.Username(username);
+                        h.Password(password);
+                    });
+
+                    // Tự động tạo Queue và gán binding cho các Consumer
+                    cfg.ConfigureEndpoints(context);
+                });
+            });
 
             // Controller
             builder.Services.AddControllers();

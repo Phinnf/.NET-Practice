@@ -1,0 +1,56 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672" # AMQP port
+      - "15672:15672" # Management Web UI (guest / guest)
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - carrental-network
+
+  carrental-api:
+    container_name: carrental-api
+    build:
+      context: ./CarRental
+      dockerfile: Dockerfile
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Port=5432;Database=car_rental_db;Username=postgres;Password=123
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+    depends_on:
+      - rabbitmq
+    networks:
+      - carrental-network
+
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    restart: always
+    environment:
+      - POSTGRES_DB=car_rental_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123
+    ports:
+      - "5432:5432" 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+    networks:
+      - carrental-network
+
+volumes:
+  postgres_data:
+  
+networks:
+  carrental-network:
+    driver: bridge
